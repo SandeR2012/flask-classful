@@ -231,9 +231,8 @@ class FlaskView(object):
 
         :param name: the name of the method to create a proxy for
         """
-
-        i = instance
-        view = getattr(i, name)
+        
+        view = getattr(instance, name)
 
         # Since the view is a bound instance method,
         # first make it an actual function
@@ -247,8 +246,8 @@ class FlaskView(object):
 
         # Now apply the class decorator list in reverse order
         # to match member decorator order
-        if cls.decorators:
-            for decorator in reversed(cls.decorators):
+        if instance.decorators:
+            for decorator in reversed(instance.decorators):
                 view = decorator(view)
 
         @functools.wraps(view)
@@ -258,14 +257,14 @@ class FlaskView(object):
             # wrapper gets called. This matches Flask's behavior.
             del forgettable_view_args
 
-            if hasattr(i, "before_request"):
-                response = i.before_request(name, **request.view_args)
+            if hasattr(instance, "before_request"):
+                response = instance.before_request(name, **request.view_args)
                 if response is not None:
                     return response
 
             before_view_name = "before_" + name
-            if hasattr(i, before_view_name):
-                before_view = getattr(i, before_view_name)
+            if hasattr(instance, before_view_name):
+                before_view = getattr(instance, before_view_name)
                 response = before_view(**request.view_args)
                 if response is not None:
                     return response
@@ -278,7 +277,7 @@ class FlaskView(object):
 
             if not isinstance(response, ResponseBase):
 
-                if not bool(cls.representations):
+                if not bool(instance.representations):
                     # representations is empty, then the default is to just
                     # output what the view function returned as a response
                     response = make_response(response, code, headers)
@@ -286,14 +285,14 @@ class FlaskView(object):
                     # Return the representation that best matches the
                     # representations in the Accept header
                     resp_representation = request.accept_mimetypes.best_match(
-                        cls.representations.keys())
+                        instance.representations.keys())
 
                     if resp_representation:
-                        response = cls.representations[
+                        response = instance.representations[
                             resp_representation
                         ](response, code, headers)
-                    elif 'flask-classful/default' in cls.representations:
-                        response = cls.representations['flask-classful/default'](
+                    elif 'flask-classful/default' in instance.representations:
+                        response = instance.representations['flask-classful/default'](
                             response, code, headers
                         )
                     else:
@@ -308,12 +307,12 @@ class FlaskView(object):
                 response = make_response(response, code, headers)
 
             after_view_name = "after_" + name
-            if hasattr(i, after_view_name):
-                after_view = getattr(i, after_view_name)
+            if hasattr(instance, after_view_name):
+                after_view = getattr(instance, after_view_name)
                 response = after_view(response)
 
-            if hasattr(i, "after_request"):
-                response = i.after_request(name, response)
+            if hasattr(instance, "after_request"):
+                response = instance.after_request(name, response)
 
             return response
 
